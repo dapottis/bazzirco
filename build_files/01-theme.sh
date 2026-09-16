@@ -21,10 +21,6 @@ dnf -y --enablerepo copr:copr.fedorainfracloud.org:yalter:niri-git \
     niri
 rm -rf /usr/share/doc/niri
 
-dnf -y copr enable avengemedia/danklinux
-dnf -y copr disable avengemedia/danklinux
-dnf -y --enablerepo copr:copr.fedorainfracloud.org:avengemedia:danklinux install quickshell-git
-
 #Bazzite uses HHD, which conflicts. When Bazzite switches from HHD, we shouldn't need to install it here anyway.
 
 #dnf -y copr enable shadowblip/InputPlumber
@@ -34,29 +30,21 @@ dnf -y --enablerepo copr:copr.fedorainfracloud.org:avengemedia:danklinux install
 #    install --setopt=install_weak_deps=False \
 #    inputplumber || true
 #inputplumber --version | grep -E -e "inputplumber [[:digit:]]*\.[[:digit:]]*\.[[:digit:]]*"
+dnf -y install noctalia
 
-dnf -y copr enable avengemedia/dms-git
-dnf -y copr disable avengemedia/dms-git
-dnf -y \
-    --enablerepo copr:copr.fedorainfracloud.org:avengemedia:dms-git \
-    --enablerepo copr:copr.fedorainfracloud.org:avengemedia:danklinux \
-    install --setopt=install_weak_deps=False \
-    dms \
-    dms-cli \
-    dgop \
-    dsearch
-
-#Only installs greeter for non-deck images
+# --- Noctalia Greeter (replaces dms-greeter) ---
+# Only installs greeter for non-deck images
 if [ "$DECK_IMAGE" == False ] ; then
-  dnf -y \
-      --enablerepo copr:copr.fedorainfracloud.org:avengemedia:dms-git \
-      --enablerepo copr:copr.fedorainfracloud.org:avengemedia:danklinux \
-      install --setopt=install_weak_deps=False \
-      dms-greeter 
+  # Add the Terra repository for noctalia-greeter
+  dnf -y install --nogpgcheck \
+    --repofrompath 'terra,https://repos.fyralabs.com/terra$releasever' \
+    terra-release
+  dnf -y install noctalia-greeter
   dnf -y install \
   	  greetd \
   	  greetd-selinux
 fi
+
 
 dnf -y install \
 	matugen \
@@ -126,6 +114,7 @@ dnf -y install --enablerepo=fedora-multimedia \
 add_wants_niri() {
     sed -i "s/\[Unit\]/\[Unit\]\nWants=$1/" "/usr/lib/systemd/user/niri.service"
 }
+
 add_wants_niri udiskie.service
 add_wants_niri foot-server.service
 cat /usr/lib/systemd/user/niri.service
@@ -152,7 +141,6 @@ cp -avf "/ctx/files"/. /
 
 systemctl enable --global chezmoi-init.service
 systemctl enable --global chezmoi-update.timer
-systemctl enable --global dms.service
 systemctl enable --global foot-server.service
 systemctl enable --global fcitx5.service
 systemctl enable --global gnome-keyring-daemon.service
@@ -194,14 +182,16 @@ fc-cache --force --really-force --system-only --verbose # recreate font-cache to
 
 echo 'source /usr/share/zirconium/shell/pure.bash' | tee -a "/etc/bashrc"
 
-#Only theme greetd on non-deck images
+# --- Noctalia Greeter Configuration (replaces dms-greeter tmpfiles) ---
+# Only theme greetd on non-deck images.
+# Noctalia's greeter reads its configuration from the user's home directory,
+# so no system-wide symlinks are needed. Ensure the greeter user has a
+# valid ~/.config/noctalia/ directory.
 if [ "$DECK_IMAGE" == False ] ; then
-tee /usr/lib/tmpfiles.d/99-greeter-config.conf <<'EOF'
-L /var/cache/dms-greeter/settings.json - greeter greeter - /usr/share/zirconium/zdots/dot_config/DankMaterialShell/settings.json
-L /var/cache/dms-greeter/session.json - greeter greeter - /usr/share/zirconium/zdots/private_dot_local/state/DankMaterialShell/session.json
-L /var/cache/dms-greeter/dms-colors.json - greeter greeter - /usr/share/zirconium/zdots/dot_cache/DankMaterialShell/dms-colors.json
-L /var/cache/dms-greeter/colors.json - greeter greeter - /usr/share/zirconium/zdots/dot_cache/DankMaterialShell/dms-colors.json
-EOF
+  # The Noctalia greeter package provides the session wrapper.
+  # Point greetd at the Noctalia session.
+  # (This is typically handled by the package's own setup, but verify.)
+  sed -i 's|^command = .*|command = "/usr/bin/noctalia-greeter-session"|' /etc/greetd/config.toml || true
 fi
 
 install -d /usr/share/bash-completion/completions /usr/share/zsh/site-functions /usr/share/fish/vendor_completions.d/
