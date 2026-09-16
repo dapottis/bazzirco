@@ -35,11 +35,7 @@ dnf -y install noctalia
 # --- Noctalia Greeter (replaces dms-greeter) ---
 # Only installs greeter for non-deck images
 if [ "$DECK_IMAGE" == False ] ; then
-  # Add the Terra repository for noctalia-greeter
-  dnf -y install --nogpgcheck \
-    --repofrompath 'terra,https://repos.fyralabs.com/terra$releasever' \
-    terra-release
-  dnf -y install noctalia-greeter
+  dnf -y --enable-repo=terra install noctalia-greeter
   dnf -y install \
   	  greetd \
   	  greetd-selinux
