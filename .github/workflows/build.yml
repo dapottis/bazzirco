@@ -32,7 +32,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        edition: ["", "deck", "nvidia", "deck-nvidia", "dx", "dx-nvidia"]
+        edition: ["", "dx"]
         #edition: ["", "nvidia"]
     runs-on: 'ubuntu-26.04'
     steps:
