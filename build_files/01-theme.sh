@@ -77,8 +77,9 @@ dnf -y install \
     xdg-desktop-portal-gnome \
     xdg-desktop-portal-gtk \
     xdg-terminal-exec \
-    xdg-user-dirs \
-    xwayland-satellite-0.8.1-1
+    xdg-user-dirs
+	
+dnf -y install "xwayland-satellite-0.8.1-1*"
 
 # we already have a service for handling fcitx5
 rm -f /usr/share/applications/fcitx5-wayland-launcher.desktop
